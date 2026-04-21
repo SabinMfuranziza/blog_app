@@ -5,8 +5,9 @@ from app.routers import auth
 
 Base.metadata.create_all(bind=engine)
 
-
 app = FastAPI(title="Blog App")
+
+app.include_router(auth.router)
 
 @app.get("/")
 def root():

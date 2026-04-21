@@ -12,10 +12,12 @@ router = APIRouter(
 
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
 def register_user(user : UserCreate, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(User.email == user.email).first()
-    if existing_user:
+    existing_useremail = db.query(User).filter(User.email == user.email).first()
+    existing_username = db.query(User).filter(User.username == user.username).first()
+    if existing_useremail:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
-    
+    if existing_username:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Username already taken")
     hashed_pwd = hash_password(user.password)
     new_user = User(
         username = user.username,
@@ -25,7 +27,11 @@ def register_user(user : UserCreate, db: Session = Depends(get_db)):
     )
 
     db.add(new_user)
-    db.commit
-    db.refresh(new_user)
+    try:
+        db.commit()
+        db.refresh(new_user)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
     return new_user
