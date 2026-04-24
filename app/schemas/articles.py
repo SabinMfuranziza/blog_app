@@ -14,3 +14,15 @@ class ArticleResponse(BaseModel):
     class Config:
         from_attributes = True
         
+
+class ArticleCreate(BaseModel):
+    title:str
+    body:str
+    status:str = "draft"
+
+
+class ArticleUpdate(BaseModel):
+    title:str|None = None
+    body:str|None = None
+    status:str|None = None
+
