@@ -19,3 +19,11 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     
     return current_user
 
+def get_admin_user(current_user = Depends(get_current_user)):
+    if current_user.role == "admin":
+        return current_user
+    
+    else:
+        raise HTTPException(status_code=403, detail="You don't have permission to access this resource")
+    
+    
