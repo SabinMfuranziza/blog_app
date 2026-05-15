@@ -50,32 +50,5 @@ def delete_user(id:int, db: Session = Depends(get_db), admin_user = Depends(get_
 
 
 
-@router.get("/articles", response_model=list[ArticleResponse])
-def get_all_articles(skip:int=0,limit:int=10,db: Session = Depends(get_db), admin_user = Depends(get_admin_user),author_id:int = None):
-    query = db.query(Article)
-    if author_id:
-        query = query.filter(Article.author_id == author_id)
-    return query.offset(skip).limit(limit).all()
 
-
-@router.patch("/articles/{id}", response_model=ArticleResponse)
-def update_article(id:int, article: ArticleUpdate, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
-    db_article = db.query(Article).filter(Article.id == id).first()
-    if not db_article:
-        raise HTTPException(status_code=404, detail="Article not found")
-    for key, value in article.model_dump(exclude_unset=True).items():
-        setattr(db_article, key, value)
-    db.commit()
-    db.refresh(db_article)
-    return db_article
-
-@router.delete("/articles/{id}", status_code=204)
-def delete_article(id:int, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
-    db_article = db.query(Article).filter(Article.id == id).first()
-    if not db_article:
-        raise HTTPException(status_code=404, detail="Article not found")
-    db.delete(db_article)
-    db.commit()
-
-    
     

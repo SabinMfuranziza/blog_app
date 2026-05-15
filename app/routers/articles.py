@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.article import Article
 from app.schemas.articles import ArticleResponse, ArticleCreate, ArticleUpdate
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, get_admin_user
 
 router = APIRouter(
     prefix="/articles",
@@ -22,6 +22,34 @@ def get_articles(db: Session = Depends(get_db),author_id:int = None,skip:int = 0
 def get_my_articles(db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     return db.query(Article).filter(Article.author_id == current_user.id).all()
 
+@router.get("/admin", response_model=list[ArticleResponse])
+def admin_get_all_articles(skip:int=0,limit:int=10,db: Session = Depends(get_db), admin_user = Depends(get_admin_user),author_id:int = None):
+    query = db.query(Article)
+    if author_id:
+        query = query.filter(Article.author_id == author_id)
+    return query.offset(skip).limit(limit).all()
+
+
+@router.patch("/admin/{id}", response_model=ArticleResponse)
+def admin_update_article(id:int, article: ArticleUpdate, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
+    db_article = db.query(Article).filter(Article.id == id).first()
+    if not db_article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    for key, value in article.model_dump(exclude_unset=True).items():
+        setattr(db_article, key, value)
+    db.commit()
+    db.refresh(db_article)
+    return db_article
+
+@router.delete("/admin/{id}", status_code=204)
+def admin_delete_article(id:int, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
+    db_article = db.query(Article).filter(Article.id == id).first()
+    if not db_article:
+        raise HTTPException(status_code=404, detail="Article not found")
+    db.delete(db_article)
+    db.commit()
+
+        
 
 @router.get("/{id}", response_model=ArticleResponse)
 def get_article(id: int, db: Session = Depends(get_db)):
@@ -62,3 +90,5 @@ def delete_article(id:int , db: Session = Depends(get_db), current_user = Depend
         raise HTTPException(status_code=404, detail="Article not found or you don't have permission to delete it")
     db.delete(db_article)
     db.commit()
+
+
