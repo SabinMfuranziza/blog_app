@@ -4,6 +4,7 @@ from app.database import get_db
 from app.models.article import Article
 from app.schemas.articles import ArticleResponse, ArticleCreate, ArticleUpdate
 from app.dependencies import get_current_user, get_admin_user
+from app.controller import article_controller
 
 router = APIRouter(
     prefix="/articles",
@@ -11,84 +12,45 @@ router = APIRouter(
 )
 
 @router.get("/", response_model=list[ArticleResponse])
-def get_articles(db: Session = Depends(get_db),author_id:int = None,skip:int = 0, limit:int = 10):
-    
-    query = db.query(Article).filter(Article.status == "published")
-    if author_id:
-        query = query.filter(Article.author_id == author_id)
-    return query.offset(skip).limit(limit).all()
+def get_articles_endpoint(skip: int = 0, limit: int = 10, db: Session = Depends(get_db), author_id: int = None):
+    return article_controller.get_articles(db, author_id, skip, limit)
+
 
 @router.get("/my_articles", response_model=list[ArticleResponse])
-def get_my_articles(db: Session = Depends(get_db), current_user = Depends(get_current_user)):
-    return db.query(Article).filter(Article.author_id == current_user.id).all()
+def get_my_articles_endpoint(db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    return article_controller.get_my_articles(db, current_user)
+
 
 @router.get("/admin", response_model=list[ArticleResponse])
-def admin_get_all_articles(skip:int=0,limit:int=10,db: Session = Depends(get_db), admin_user = Depends(get_admin_user),author_id:int = None):
-    query = db.query(Article)
-    if author_id:
-        query = query.filter(Article.author_id == author_id)
-    return query.offset(skip).limit(limit).all()
+def admin_get_all_articles_endpoint(skip: int = 0, limit: int = 10, db: Session = Depends(get_db), admin_user = Depends(get_admin_user), author_id: int = None):
+    return article_controller.admin_get_all_articles(skip, limit, db, admin_user, author_id)
 
 
 @router.patch("/admin/{id}", response_model=ArticleResponse)
-def admin_update_article(id:int, article: ArticleUpdate, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
-    db_article = db.query(Article).filter(Article.id == id).first()
-    if not db_article:
-        raise HTTPException(status_code=404, detail="Article not found")
-    for key, value in article.model_dump(exclude_unset=True).items():
-        setattr(db_article, key, value)
-    db.commit()
-    db.refresh(db_article)
-    return db_article
+def admin_update_article_endpoint(id: int, article: ArticleUpdate, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
+    return article_controller.admin_update_article(id, article, db, admin_user)
 
 @router.delete("/admin/{id}", status_code=204)
-def admin_delete_article(id:int, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
-    db_article = db.query(Article).filter(Article.id == id).first()
-    if not db_article:
-        raise HTTPException(status_code=404, detail="Article not found")
-    db.delete(db_article)
-    db.commit()
-
+def admin_delete_article_endpoint(id: int, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
+    return article_controller.admin_delete_article(id, db, admin_user)
         
 
 @router.get("/{id}", response_model=ArticleResponse)
-def get_article(id: int, db: Session = Depends(get_db)):
-    article = db.query(Article).filter(Article.id == id, Article.status == "published").first() 
-    if not article:
-        raise HTTPException(status_code=404, detail="Article not found")
-    return article
+def get_article_endpoint(id: int, db: Session = Depends(get_db)):
+    return article_controller.get_article(id, db)
 
 
 @router.post("/", response_model=ArticleResponse, status_code=201)
-def create_article(article: ArticleCreate, db: Session = Depends(get_db),current_user = Depends(get_current_user)):
-    new_article = Article(
-        title = article.title,
-        body = article.body,
-        status = article.status, 
-        author_id = current_user.id
-    )
-    db.add(new_article)
-    db.commit()
-    db.refresh(new_article)
-    return new_article
+def create_article_endpoint(article: ArticleCreate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    return article_controller.create_article(article, db, current_user)
 
 @router.patch("/{id}", response_model=ArticleResponse)
-def update_Article(id:int, article: ArticleUpdate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
-    db_article = db.query(Article).filter(Article.id == id, Article.author_id == current_user.id).first()
-    if not db_article:
-        raise HTTPException(status_code=404, detail="Article not found or you don't have permission to edit it")
-    for key, value in article.model_dump(exclude_unset=True).items():
-        setattr(db_article, key, value)
-    db.commit()
-    db.refresh(db_article)
-    return db_article
+def update_article_endpoint(id: int, article: ArticleUpdate, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    return article_controller.update_Article(id, article, db, current_user)
+
+
 
 @router.delete("/{id}", status_code=204)
-def delete_article(id:int , db: Session = Depends(get_db), current_user = Depends(get_current_user)):
-    db_article = db.query(Article).filter(Article.id == id, Article.author_id == current_user.id).first()
-    if not db_article:
-        raise HTTPException(status_code=404, detail="Article not found or you don't have permission to delete it")
-    db.delete(db_article)
-    db.commit()
-
+def delete_article_endpoint(id: int, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    return article_controller.delete_article(id, db, current_user)
 

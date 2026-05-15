@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from app.database import get_db
 from app.models.article import Article  
 from app.schemas.articles import ArticleResponse, ArticleCreate, ArticleUpdate
 from app.dependencies import get_current_user, get_admin_user
 from app.schemas.user import UserResponse
 from app.models.user import User
 from app.schemas.admin import AdminUserUpdate
+from app.controller import admin_controller  
+from sqlalchemy.orm import Session
+from app.database import get_db
 
 
 router = APIRouter(
@@ -15,40 +16,22 @@ router = APIRouter(
 )
 
 @router.get("/users", response_model=list[UserResponse])
-def get_users(skip:int=0,limit:int=10,db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
-    return db.query(User).offset(skip).limit(limit).all()
+def read_users(db: Session = Depends(get_db), skip: int = 0, limit: int = 10, admin_user = Depends(get_admin_user)):
+    return admin_controller.get_users(db, skip, limit, admin_user)
 
 
 @router.get("/users/{id}", response_model=UserResponse)
-def get_user(id:int, db:Session = Depends(get_db), admin_user = Depends(get_admin_user)):
-    db_user = db.query(User).filter(User.id == id).first()
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return db_user
+def read_user(id: int, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
+    return admin_controller.get_user(id, db, admin_user)
 
 @router.patch("/users/{id}", response_model=UserResponse)
-def update_user(id:int, user: AdminUserUpdate, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
-    db_user = db.query(User).filter(User.id == id).first()
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    for key, value in user.model_dump(exclude_unset=True).items():
-        setattr(db_user, key, value)
-    db.commit()
-    db.refresh(db_user)
-    return db_user
+def update_user(id: int, user: AdminUserUpdate, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
+    return admin_controller.update_user(id, user, db, admin_user)
 
 
 @router.delete("/users/{id}", status_code=204)
-def delete_user(id:int, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
-    db_user = db.query(User).filter(User.id == id).first()
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if id == admin_user.id:
-        raise HTTPException(status_code=400, detail="You can't delete yourself")
-    db.delete(db_user)
-    db.commit()
-
-
+def delete_user(id: int, db: Session = Depends(get_db), admin_user = Depends(get_admin_user)):
+    return admin_controller.delete_user(id, db, admin_user)
 
 
     
