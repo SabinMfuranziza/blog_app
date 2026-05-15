@@ -10,5 +10,5 @@ class User(Base):
     email = Column(String, nullable=False)
     hashed_password = Column(String, nullable=False)
     role = Column(String,default="author")
-    created_At = Column(DateTime(timezone=True),server_default=func.now())
+    created_at = Column(DateTime(timezone=True),server_default=func.now(), name="created_At")
     
